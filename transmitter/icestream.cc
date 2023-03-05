@@ -13,7 +13,7 @@ void IceStream::setHost(const char *hostIP) {
 	if (shout_set_host(m_pShout, hostIP) != SHOUTERR_SUCCESS)
 		throw TMException(0, m_pShout);
 }
-void IceStream::setPort(unsigned short port) {
+void IceStream::setPort(unsigned short &port) {
 	if (shout_set_port(m_pShout, port) != SHOUTERR_SUCCESS)
 		throw TMException(0, m_pShout);
 }
@@ -29,16 +29,6 @@ void IceStream::setUser(const char *src) {
 	if (shout_set_user(m_pShout, src) != SHOUTERR_SUCCESS)
 		throw TMException(0, m_pShout);
 }
-void IceStream::setInputDeviceIndex(int idx, char usedChans) { 
-	mDevIdx = idx;
-	mDevChans = usedChans;
-}
-const int IceStream::getInputDeviceIndex() { return mDevIdx; }
-void IceStream::setChannels(short left, short right) {
-	mLeft = left;
-	mRight = right;
-}
-void IceStream::setBitRate(unsigned char kbits) { mBitRate = kbits; }
 void IceStream::transmit(short *data) {
 	if (!mStreamOpen) {
 		if (shout_open(m_pShout) != SHOUTERR_SUCCESS)
@@ -75,22 +65,22 @@ void IceStream::stop() {
 	}
 }
 
-void IceStream::setupLame() {
+void IceStream::setupLame(unsigned short smpRate) {
 	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 	 * LAME mp3 buffer size computing recomendations:
 	 * num_samples*(bitrate/8)/samplerate + 4*1152*(bitrate/8)/samplerate + 512
 	 * are optimized to:
 	 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 	int pcmBufLen = m_pSets->frmPerBuf * (mRight == -1 ? 1 : 2);
-	m_mp3BufLen = (pcmBufLen * mBitRate + 4608 * mBitRate + 4096
-			* m_pSets->smpRate) / (8 * m_pSets->smpRate);
+	m_mp3BufLen = (pcmBufLen * mBitRate + 4608 * mBitRate + 4096 * smpRate) 
+			/ (8 * smpRate);
 	//LAME settings here:
 	lame_set_num_channels(m_pLame, mRight == -1 ? 1 : 2);
-	lame_set_in_samplerate(m_pLame, m_pSets->smpRate);
+	lame_set_in_samplerate(m_pLame, smpRate);
 	lame_set_VBR(m_pLame, vbr_off);
 	lame_set_brate(m_pLame, mBitRate);
 	lame_set_mode(m_pLame, mRight == -1 ? MONO : STEREO);
 	lame_set_quality(m_pLame, 2);
-	lame_set_out_samplerate(m_pLame, m_pSets->smpRate);
+	lame_set_out_samplerate(m_pLame, smpRate);
 	lame_init_params(m_pLame);
 }
